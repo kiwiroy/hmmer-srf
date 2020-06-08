@@ -1,0 +1,36 @@
+Bootstrap: docker
+From: ubuntu:bionic
+Stage: build
+
+%post
+  ## Download build prerequisites
+  apt-get update
+  apt-get -y install gcc make wget
+  
+  ## Build
+  cd /opt
+  wget http://eddylab.org/software/hmmer/hmmer.tar.gz
+  tar -xzf hmmer.tar.gz
+  cd hmmer-3.3
+  ./configure
+  make
+  make install
+
+Bootstrap: docker
+From: ubuntu:bionic
+Stage: final
+
+%labels
+Maintainer eric.burgueno@plantandfood.co.nz
+Version 
+
+%files from build
+  /usr/local/bin/* /usr/local/bin/
+
+%runscript
+if [ -x /usr/local/bin/$SINGULARITY_NAME ]; then
+    exec $SINGULARITY_NAME "$@"
+else
+  /bin/echo -e "This Singularity image cannot provide a single entrypoint. Please use \"singularity exec $SINGULARITY_NAME <cmd>\", where <cmd> is one of the following:\n"
+  exec ls /usr/local/bin
+fi
