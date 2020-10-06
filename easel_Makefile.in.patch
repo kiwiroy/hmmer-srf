@@ -1,0 +1,13 @@
+diff --git a/easel/Makefile.in b/easel/Makefile.in
+index 0d2b8a2..d412ab6 100644
+--- a/easel/Makefile.in
++++ b/easel/Makefile.in
+@@ -67,7 +67,7 @@ VMX_CFLAGS     = @VMX_CFLAGS@
+ CPPFLAGS       = @CPPFLAGS@
+ LDFLAGS        = @LDFLAGS@
+ LIBGSL         = @LIBGSL@
+-LIBS           = @LIBS@ @PTHREAD_LIBS@
++LIBS           = @LIBS@ @PTHREAD_LIBS@ @LIBGSL@
+ 
+ 
+ # Other tools

@@ -1,1 +1,1 @@
-Singularity.3.3
+Singularity.latest

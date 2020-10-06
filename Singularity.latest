@@ -1,0 +1,53 @@
+Bootstrap: docker
+From: alpine:3.12
+
+%setup
+  # generate .singularity/post-environment _on_ host
+  sh .singularity/capture-environment.sh
+
+%environment
+  export LC_ALL=C
+  export PATH=/opt/local/bin:$PATH
+  export TZ=Etc/UTC
+
+%files
+  .singularity/post-environment /root/.singularity-post-environment 
+  easel_Makefile.in.patch /opt/src/easel_Makefile.in.patch
+  hmmer-commands /opt/hmmer-commands
+
+%post
+  # source and remove secrets
+  . /root/.singularity-post-environment && rm /root/.singularity-post-environment
+  function s10hub_version_gt() { test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; }
+  
+  cd /opt/src
+  ## Download build prerequisites
+  apk --update add --virtual .build-deps build-base curl gcc git gsl-dev make perl python3 tzdata
+  apk --update add --virtual .runtime gsl
+
+  curl -Lo hmmer-${VERSION}.tar.gz http://eddylab.org/software/hmmer/hmmer-${VERSION}.tar.gz && \
+    tar -xzf hmmer-${VERSION}.tar.gz && \
+    cd hmmer-${VERSION}
+  # easel build fix see https://git.io/JUAFQ
+  if ! s10hub_version_gt "${VERSION}" "3.3.1"; then
+    patch -p1 -u < ../easel_Makefile.in.patch
+  fi
+  
+  # build, check and install
+  ./configure --prefix=/opt/local --with-gsl
+  make
+  make check
+  make install
+  
+  # clean up
+  apk del .build-deps
+  rm -rf /opt/src
+
+%runscript
+  SINGULARITY_BASENAME=$(basename $SINGULARITY_NAME .sif)
+  if echo $SINGULARITY_BASENAME | grep -qxf /opt/hmmer-commands; then
+    exec $SINGULARITY_NAME "$@"
+  else
+    /bin/echo -e "This Singularity image cannot provide a single entrypoint. Please use \"singularity exec $SINGULARITY_NAME <cmd>\", where <cmd> is one of the following:\n"
+    exec cat /opt/hmmer-commands
+  fi

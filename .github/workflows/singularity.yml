@@ -1,0 +1,43 @@
+name: Singularity Build
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        singularity_version:
+          - '3.5.3'
+        hmmer_version:
+          - '3.3.1'
+          - '3.3'
+          - '3.2'
+    container:
+      image: quay.io/singularity/singularity:v${{ matrix.singularity_version }}
+      options: --privileged
+    steps:
+    - name: Check out code for the container build
+      uses: actions/checkout@v1
+    - name: Update timezone and localtime
+      run: |
+        apk add --no-cache tzdata
+        cp /usr/share/zoneinfo/$TZ /etc/localtime
+        echo $TZ > /etc/timezone
+        apk del tzdata
+      env:
+        TZ: Etc/UTC
+    - name: Build Container
+      run: make build IMAGE_VERSION=$VERSION RECIPE_FILE=Singularity.latest
+      env:
+        VERSION: ${{ matrix.hmmer_version }}
+        SQC_NONZERO_EXIT: 1
+    - name: Build Dist for Artefact
+      run: make dist IMAGE_VERSION=$VERSION RECIPE_FILE=Singularity.latest
+      env:
+        VERSION: ${{ matrix.hmmer_version }}
+    - name: Store artefact
+      uses: actions/upload-artifact@v2
+      with:
+        name: hmmer-${{ matrix.hmmer_version }}-${{ github.sha }}
+        path: hmmer-${{ matrix.hmmer_version }}.tar.gz
